@@ -10,27 +10,27 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
+	"go.uber.org/zap"
 
 	"github.com/splunk/collector-workshop-example/jenkinsreceiver/internal/metadata"
 )
 
 type scraper struct {
-	mb       *metadata.MetricsBuilder
-	settings component.TelemetrySettings
-
+	mb     *metadata.MetricsBuilder
+	log    *zap.Logger
 	client *jenkins.Jenkins
 }
 
 func newScraper(cfg *Config, set receiver.CreateSettings) (scraperhelper.Scraper, error) {
 	s := &scraper{
-		settings: set.TelemetrySettings,
-		mb:       metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, set),
+		mb:  metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, set),
+		log: set.Logger,
 	}
 	return scraperhelper.NewScraper(
 		metadata.Type,
 		s.scrape,
 		scraperhelper.WithStart(func(ctx context.Context, h component.Host) error {
-			client, err := cfg.ToClient(h, s.settings)
+			client, err := cfg.ToClient(h, set.TelemetrySettings)
 			if err != nil {
 				return err
 			}
@@ -69,6 +69,11 @@ func (s *scraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 			status = metadata.AttributeJobStatusFailed
 		}
 
+		s.log.Debug("Reading build information",
+			zap.String("build.result", build.Result),
+			zap.String("job.name", job.Name),
+		)
+
 		s.mb.RecordJenkinsJobDurationDataPoint(
 			now,
 			int64(job.LastCompletedBuild.Duration),
@@ -77,6 +82,9 @@ func (s *scraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		)
 
 		if len(build.ChangeSet.Items) == 0 {
+			s.log.Debug("No changeset items reported",
+				zap.String("job.name", job.Name),
+			)
 			continue
 		}
 		change := build.ChangeSet.Items[0]
