@@ -1,0 +1,45 @@
+---
+type: jenkins
+
+status:
+  class: receiver
+  stability:
+    development: [metrics]
+
+attributes:
+  job.name:
+    description: The name of the associated Jenkins job
+    type: string
+  job.status:
+    description: Shows if the job had passed, or failed
+    type: string
+    enum:
+    - failed
+    - success
+    - unknown
+
+metrics:
+  jenkins.jobs.count:
+    enabled: true
+    description: Provides a count of the total number of configured jobs
+    unit: "{Count}"
+    gauge:
+      value_type: int
+  jenkins.job.duration:
+    enabled: true
+    description: Show the duration of the job
+    unit: "s"
+    gauge:
+      value_type: int
+    attributes:
+    - job.name
+    - job.status
+  jenkins.job.commit_delta:
+    enabled: true
+    description: The calculation difference of the time job was finished minus commit timestamp
+    unit: "s"
+    gauge:
+      value_type: int
+    attributes:
+    - job.name
+    - job.status
