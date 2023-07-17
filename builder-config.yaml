@@ -1,6 +1,6 @@
 ---
 dist:
-  name: otelcol-ninja
+  name: otelcol
   description: A custom build of the Open Telemetry Collector
   output_path: ./dist
 
